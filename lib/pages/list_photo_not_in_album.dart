@@ -5,13 +5,12 @@ import 'package:scoped_model/scoped_model.dart';
 import 'package:sharing_codelab/components/primary_raised_button.dart';
 import 'package:sharing_codelab/model/photos_library_api_model.dart';
 import 'package:sharing_codelab/components/trip_app_bar.dart';
-import 'package:sharing_codelab/pages/list_photo_not_in_album.dart';
-import 'package:sharing_codelab/pages/trip_page.dart';
 import 'package:sharing_codelab/photos_library_api/album.dart';
+import 'package:sharing_codelab/photos_library_api/media_item.dart';
 
 
-class TripListPage extends StatelessWidget {
-  const TripListPage({Key? key}) : super(key: key);
+class ListPhotoNotInAlbumPage extends StatelessWidget {
+  const ListPhotoNotInAlbumPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -29,13 +28,13 @@ class TripListPage extends StatelessWidget {
 
 
 
-            if (!photosLibraryApi.hasAlbums) {
+            if (!photosLibraryApi.hasPhotoPasDansAlbum) {
               return const Center(
                 child: CircularProgressIndicator(),
               );
             }
 
-            if (photosLibraryApi.albums.isEmpty) {
+            if (photosLibraryApi.photoPasDansUnAlbum.isEmpty) {
               return Column(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: <Widget>[
@@ -62,71 +61,45 @@ class TripListPage extends StatelessWidget {
             }
 
             return ListView.builder(
-              itemCount: photosLibraryApi.albums.length + 1,
+              itemCount: photosLibraryApi.photoPasDansUnAlbum.length + 1,
               itemBuilder: (BuildContext context, int index) {
                 if (index == 0) {
                   return _buildButtons(context);
                 }
 
-                return _buildTripCard(
-                    context, photosLibraryApi.albums[index - 1], photosLibraryApi);
+                return _buildMediaItem(
+                     photosLibraryApi.photoPasDansUnAlbum[index - 1]);
               },
             );
       },
     );
   }
 
-Widget _buildTripCard(BuildContext context, Album sharedAlbum,
-    PhotosLibraryApiModel photosLibraryApi) {
-  return Card(
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(8)),
-    ),
-    elevation: 3,
-    clipBehavior: Clip.antiAlias,
-    margin: const EdgeInsets.symmetric(
-      vertical: 12,
-      horizontal: 33,
-    ),
-    child: InkWell(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (BuildContext context) => TripPage(
-            album: sharedAlbum,
-            searchResponse: photosLibraryApi.searchMediaItems(sharedAlbum.id),
+  Widget _buildMediaItem(MediaItem mediaItem) {
+    return Column(
+      children: <Widget>[
+        Center(
+          child: CachedNetworkImage(
+            imageUrl: '${mediaItem.baseUrl}=w364',
+            progressIndicatorBuilder: (context, url, downloadProgress) =>
+                CircularProgressIndicator(value: downloadProgress.progress),
+            errorWidget: (BuildContext context, String url, Object? error) {
+              print(error);
+              return const Icon(Icons.error);
+            },
           ),
         ),
-      ),
-      child: Column(
-        children: <Widget>[
-          Container(
-            child: _buildTripThumbnail(sharedAlbum),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 2),
+          width: 364,
+          child: Text(
+            mediaItem.description ?? '',
+            textAlign: TextAlign.left,
           ),
-          Container(
-            height: 52,
-            padding: const EdgeInsets.only(left: 8),
-            child: Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-              _buildSharedIcon(sharedAlbum),
-              Flexible(
-                child: Align(
-                  alignment: const FractionalOffset(0, 0.5),
-                  child: Text(
-                    sharedAlbum.title ?? '[no title]',
-                    style: const TextStyle(
-                      fontSize: 18,
-                    ),
-                  ),
-                ),
-              )
-
-            ]),
-          ),
-        ],
-      ),
-    ),
-  );
-}
+        ),
+      ],
+    );
+  }
 
 Widget _buildTripThumbnail(Album sharedAlbum) {
   if (sharedAlbum.coverPhotoBaseUrl == null ||
@@ -173,18 +146,7 @@ Widget _buildButtons(BuildContext context) {
           // },
           label: const Text('CREATE A TRIP ALBUM'),
         ),
-        PrimaryRaisedButton(
 
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (BuildContext context) => const ListPhotoNotInAlbumPage(),
-              ),
-            );
-          },
-          label: const Text('VIEW PHOTO NOT IN ALBUM'),
-        ),
         Container(
           padding: const EdgeInsets.only(top: 10),
           child: const Text(
