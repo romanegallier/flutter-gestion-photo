@@ -72,39 +72,85 @@ class _TripPageState extends State<TripPage> {
     );
   }
 
-  // ignore: unused_element
   Future<void> _shareAlbum(BuildContext context) async {
-    // TODO(codelab): Implement this method.
-    ToBeImplemented.showMessage();
+    String? id = album.id;
 
-    // If the album is not shared yet, call the Library API to share it and
-    // update the local model
+    if (id == null) {
+      // Album is missing an ID.
+      const snackBar = SnackBar(
+        duration: Duration(seconds: 3),
+        content: Text('Could not share album. Try reopening this page.'),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      return;
+    }
 
-    // Once the album contains the shareInfo data, display its share token
+    // Show the loading indicator
+    setState(() => _inSharingApiCall = true);
+
+    const snackBar = SnackBar(
+      duration: Duration(seconds: 3),
+      content: Text('Sharing Album...'),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+
+    // Share the album and update the local model
+    await ScopedModel.of<PhotosLibraryApiModel>(context).shareAlbum(id);
+    final updatedAlbum =
+    await ScopedModel.of<PhotosLibraryApiModel>(context).getAlbum(id);
+
+    print('Album has been shared.');
+    setState(() {
+      album = updatedAlbum;
+      // Hide the loading indicator
+      _inSharingApiCall = false;
+    });
   }
 
   Future<void> _showShareableUrl(BuildContext context) async {
-    // TODO(codelab): Implement this method.
-    ToBeImplemented.showMessage();
+    if (album.shareInfo == null || album.shareInfo!.shareableUrl == null) {
+      print('Not shared, sharing album first.');
+
+      // Album is not shared yet, share it first, then display dialog
+      await _shareAlbum(context);
+      _showUrlDialog(context);
+    } else {
+      // Album is already shared, display dialog with URL
+      _showUrlDialog(context);
+    }
   }
 
   Future<void> _showShareToken(BuildContext context) async {
-    // TODO(codelab): Implement this method.
-    ToBeImplemented.showMessage();
+    if (album.shareInfo == null) {
+      print('Not shared, sharing album first.');
+
+      // Album is not shared yet, share it first, then display dialog
+      await _shareAlbum(context);
+      _showTokenDialog(context);
+    } else {
+      // Album is already shared, display dialog with token
+      _showTokenDialog(context);
+    }
   }
 
-  // ignore: unused_element
+
+
   void _showTokenDialog(BuildContext context) {
-    // TODO(codelab): Implement this method.
-    ToBeImplemented.showMessage();
+    print('This is the shareToken:\n${album.shareInfo!.shareToken}');
+
+    _showShareDialog(
+        context, 'Use this token to share', album.shareInfo!.shareToken!);
   }
 
-  // ignore: unused_element
   void _showUrlDialog(BuildContext context) {
-    // TODO(codelab): Implement this method.
-    ToBeImplemented.showMessage();
-  }
+    print('This is the shareableUrl:\n${album.shareInfo!.shareableUrl}');
 
+    _showShareDialog(
+        context,
+        'Share this URL with anyone. '
+            'Anyone with this URL can access all items.',
+        album.shareInfo!.shareableUrl!);
+  }
   // ignore: unused_element
   void _showShareDialog(BuildContext context, String title, String text) {
     showDialog(

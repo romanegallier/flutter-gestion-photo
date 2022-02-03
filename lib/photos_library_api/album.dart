@@ -13,6 +13,16 @@ class Album {
 
   Map<String, dynamic> toJson() => _$AlbumToJson(this);
 
+
+  @override
+  String toString() {
+    return 'Album{id: $id, title: $title, productUrl: $productUrl, isWriteable: $isWriteable, shareInfo: $shareInfo, mediaItemsCount: $mediaItemsCount, coverPhotoBaseUrl: $coverPhotoBaseUrl, coverPhotoMediaItemId: $coverPhotoMediaItemId}';
+  }
+
+  String toStringCsv() {
+    return '$id;$title;$productUrl;$mediaItemsCount';
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:scoped_model/scoped_model.dart';
+import 'package:sharing_codelab/model/photos_library_api_model.dart';
 import 'package:sharing_codelab/pages/trip_page.dart';
 import 'package:sharing_codelab/util/to_be_implemented.dart';
 
@@ -116,19 +118,35 @@ class _ContributePhotoDialogState extends State<ContributePhotoDialog> {
   }
 
   Future _getImage(BuildContext context) async {
-    // TODO(codelab): Implement this method.
-
-    ToBeImplemented.showMessage();
-
     // Use the image_picker package to prompt the user for a photo from their
     // device.
+    final pickedImage = await (_imagePicker.pickImage(
+      source: ImageSource.camera,
+    ));
+
+    if (pickedImage == null) {
+      // No image selected.
+      return;
+    }
+
+    final pickedFile = File(pickedImage.path);
 
     // Store the image that was selected.
+    setState(() {
+      _image = pickedFile;
+      _isUploading = true;
+    });
 
     // Make a request to upload the image to Google Photos once it was selected.
+    final uploadToken = await ScopedModel.of<PhotosLibraryApiModel>(context)
+        .uploadMediaItem(pickedFile);
 
-    // Once the upload process has completed, store the upload token.
-    // This token is used together with the description to create the media
-    // item later.
+    setState(() {
+      // Once the upload process has completed, store the upload token.
+      // This token is used together with the description to create the media
+      // item later.
+      _uploadToken = uploadToken;
+      _isUploading = false;
+    });
   }
 }

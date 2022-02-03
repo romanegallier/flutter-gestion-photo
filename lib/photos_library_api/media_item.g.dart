@@ -12,6 +12,7 @@ MediaItem _$MediaItemFromJson(Map<String, dynamic> json) {
     json['description'] as String?,
     json['productUrl'] as String?,
     json['baseUrl'] as String?,
+    json['filename'] as String?,
   );
 }
 
@@ -29,5 +30,6 @@ Map<String, dynamic> _$MediaItemToJson(MediaItem instance) {
   writeNotNull('description', instance.description);
   writeNotNull('productUrl', instance.productUrl);
   writeNotNull('baseUrl', instance.baseUrl);
+  writeNotNull('filename', instance.fileName);
   return val;
 }

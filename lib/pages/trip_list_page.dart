@@ -8,6 +8,10 @@ import 'package:sharing_codelab/components/trip_app_bar.dart';
 import 'package:sharing_codelab/pages/list_photo_not_in_album.dart';
 import 'package:sharing_codelab/pages/trip_page.dart';
 import 'package:sharing_codelab/photos_library_api/album.dart';
+import 'package:sharing_codelab/photos_library_api/rename_album_request.dart';
+
+import 'create_trip_page.dart';
+import 'join_trip_page.dart';
 
 
 class TripListPage extends StatelessWidget {
@@ -56,7 +60,7 @@ class TripListPage extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  _buildButtons(context),
+                  _buildButtons(context, photosLibraryApi),
                 ],
               );
             }
@@ -65,7 +69,7 @@ class TripListPage extends StatelessWidget {
               itemCount: photosLibraryApi.albums.length + 1,
               itemBuilder: (BuildContext context, int index) {
                 if (index == 0) {
-                  return _buildButtons(context);
+                  return _buildButtons(context, photosLibraryApi);
                 }
 
                 return _buildTripCard(
@@ -154,7 +158,7 @@ Widget _buildTripThumbnail(Album sharedAlbum) {
   );
 }
 
-Widget _buildButtons(BuildContext context) {
+Widget _buildButtons(BuildContext context, PhotosLibraryApiModel model) {
   return Container(
     padding: const EdgeInsets.all(30),
     child: Column(
@@ -163,14 +167,14 @@ Widget _buildButtons(BuildContext context) {
       children: <Widget>[
         PrimaryRaisedButton(
 
-          // onPressed: () {
-          //   Navigator.push(
-          //     context,
-          //     MaterialPageRoute(
-          //       builder: (BuildContext context) => const CreateTripPage(),
-          //     ),
-          //   );
-          // },
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (BuildContext context) => const CreateTripPage(),
+              ),
+            );
+          },
           label: const Text('CREATE A TRIP ALBUM'),
         ),
         PrimaryRaisedButton(
@@ -185,6 +189,27 @@ Widget _buildButtons(BuildContext context) {
           },
           label: const Text('VIEW PHOTO NOT IN ALBUM'),
         ),
+        PrimaryRaisedButton(
+
+          onPressed: () {
+            model.createNewAlbum();
+          },
+          label: const Text('CREATE NEW 2 ALBUM'),
+        ),
+        PrimaryRaisedButton(
+
+          onPressed: () {
+            model.renameAlbum();
+          },
+          label: const Text('RENAME ALBUM'),
+        ),
+        PrimaryRaisedButton(
+
+          onPressed: () {
+            model.reloadAlbum();
+          },
+          label: const Text('RELOAD ALBUM'),
+        ),
         Container(
           padding: const EdgeInsets.only(top: 10),
           child: const Text(
@@ -196,15 +221,15 @@ Widget _buildButtons(BuildContext context) {
           ),
         ),
         TextButton(
-          onPressed:() => {},
-          // onPressed: () {
-          //   Navigator.push(
-          //     context,
-          //     MaterialPageRoute(
-          //       builder: (BuildContext context) => const JoinTripPage(),
-          //     ),
-          //   );
-          // },
+
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (BuildContext context) => const JoinTripPage(),
+              ),
+            );
+          },
           child: const Text('JOIN A TRIP ALBUM'),
         ),
       ],
