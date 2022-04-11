@@ -3,35 +3,33 @@
 import 'dart:collection';
 import 'dart:io';
 
-import 'package:flutter/animation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:scoped_model/scoped_model.dart';
 import 'package:sharing_codelab/model/constant.dart';
+import 'package:sharing_codelab/photos_library_api/add_media_album_request.dart';
 import 'package:sharing_codelab/photos_library_api/album.dart';
 import 'package:sharing_codelab/photos_library_api/batch_create_media_items_request.dart';
 import 'package:sharing_codelab/photos_library_api/batch_create_media_items_response.dart';
 import 'package:sharing_codelab/photos_library_api/create_album_request.dart';
 import 'package:sharing_codelab/photos_library_api/get_album_request.dart';
+import 'package:sharing_codelab/photos_library_api/get_media_item_request.dart';
 import 'package:sharing_codelab/photos_library_api/join_shared_album_request.dart';
 import 'package:sharing_codelab/photos_library_api/join_shared_album_response.dart';
 import 'package:sharing_codelab/photos_library_api/list_albums_response.dart';
 import 'package:sharing_codelab/photos_library_api/list_shared_albums_response.dart';
 import 'package:sharing_codelab/photos_library_api/media_item.dart';
 import 'package:sharing_codelab/photos_library_api/photos_library_api_client.dart';
-import 'package:sharing_codelab/photos_library_api/rename_album_request.dart';
 import 'package:sharing_codelab/photos_library_api/search_media_items_request.dart';
 import 'package:sharing_codelab/photos_library_api/search_media_items_response.dart';
 import 'package:sharing_codelab/photos_library_api/share_album_request.dart';
 import 'package:sharing_codelab/photos_library_api/share_album_response.dart';
+import 'package:sharing_codelab/sqlModel/album.dart' as sql;
+import 'package:sharing_codelab/sqlModel/media_item.dart' as sql;
 import 'package:sharing_codelab/sqlModel/sql_service.dart';
 
-
-
 class PhotosLibraryApiModel extends Model {
-
   var _sqlService = GetIt.I<SqlService>();
-
 
   PhotosLibraryApiModel() {
     _googleSignIn.onCurrentUserChanged.listen((GoogleSignInAccount? account) {
@@ -63,7 +61,6 @@ class PhotosLibraryApiModel extends Model {
   bool hasAlbums = false;
 
   final LinkedHashSet<MediaItem> _photoPasDansUnAlbum = LinkedHashSet<MediaItem>();
-  bool hasPhotoPasDansAlbum = false;
 
   PhotosLibraryApiClient? client;
 
@@ -188,7 +185,7 @@ void updateAlbums() async {
   void updatePhotoPasDansUnAlbum() async {
     List<Album> albumLocal =[];
     // Reset the flag before loading new albums
-    hasPhotoPasDansAlbum = false;
+
     List<MediaItem> photoDansAlbum = [];
 
 
@@ -269,7 +266,6 @@ void updateAlbums() async {
     //
     // print("nb Photo Pas dans album : " + _photoPasDansUnAlbum.length.toString());
 
-    hasPhotoPasDansAlbum = true;
     notifyListeners();
   }
 
@@ -347,27 +343,26 @@ Future<ListAlbumsResponse> _loadAlbums(String? pageToken) async {
     }
     while( res.nextPageToken!= null){
       res = await _loadAlbums(res.nextPageToken);
-      if (res.albums!= null) {
-        list.addAll( res.albums!);
+      if (res.albums != null) {
+        list.addAll(res.albums!);
       }
     }
     return list;
-
   }
 
-  bool isReloadAlbumEnCours =false;
+  bool isReloadAlbumEnCours = false;
+  bool isReloadMediaEnCours = false;
 
   String toString2(String? element) {
-    return (element!=null)?  element: "";
+    return (element != null) ? element : "";
   }
 
- void createNewAlbum(){
-  for (String albumName in albumACreer) {
-    print("Creation album: "+ albumName );
-    createAlbum(albumName);
+  void createNewAlbum() {
+    for (String albumName in albumACreer) {
+      print("Creation album: " + albumName);
+      createAlbum(albumName);
+    }
   }
-
- }
 
 
  //Ne fonctionne pas renvoie une 400 pour une raison inconnue
@@ -395,7 +390,7 @@ Future<ListAlbumsResponse> _loadAlbums(String? pageToken) async {
 
     var sharedAlbum = await _loadAllSharedAlbums();
     for (var element in sharedAlbum) {
-      if(!albumList.contains(element)){
+      if (!albumList.contains(element)) {
         albumList.add(element);
       }
     }
@@ -404,5 +399,55 @@ Future<ListAlbumsResponse> _loadAlbums(String? pageToken) async {
     _sqlService.insertListAlbum(albumList);
 
     isReloadAlbumEnCours = false;
+  }
+
+  void reloadMedia() async {
+    isReloadMediaEnCours = true;
+    List<Album> albumList = [];
+    // Skip if not signed in
+    if (!isLoggedIn()) {
+      return;
+    }
+    print("Recuperation des albums en base de données");
+    List<sql.Album> listAlbum = await _sqlService.albums();
+    print("Nb d'album recupere" + listAlbum.length.toString());
+
+    List<MediaItem> toutPhotoAlbum = [];
+    int index = 0;
+    print("Chargement des photo par album");
+    for (sql.Album a in listAlbum) {
+      print("album " + index.toString() + "/" + listAlbum.length.toString());
+      index++;
+      List<MediaItem> l = await searchAllMediaItems(a.id);
+      toutPhotoAlbum.addAll(l);
+    }
+    print("Fin de chargement des photo par album");
+
+    print("Chargement de toutes les photos");
+    List<MediaItem> toutPhoto = await _loadAllPhoto();
+    List<sql.MediaItem> toutPhotoSql = toutPhoto
+        .map((e) => sql.MediaItem.fromDto2(e, toutPhotoAlbum.contains(e)))
+        .toList();
+    print("Fin chargement de toutes les photo");
+
+    _sqlService.removeMedia();
+    _sqlService.insertListMedia(toutPhotoSql);
+
+    isReloadMediaEnCours = false;
+  }
+
+  Future<List<sql.MediaItem>> listPhotoNotInAlbum() async {
+    return (await _sqlService.mediaItems())
+        .where((element) => element.isInAlbum == 0)
+        .toList();
+  }
+
+  Future<MediaItem> getMediaItem(String id) async =>
+      client!.getMediaItems(GetMediaItemRequest.defaultOptions(id));
+
+  //Google ne laisse pas ajouter de photo a un album qui n'as pas ete creer par l'appli ...
+  //TODO recreer tout les album par l'appli ?
+  Future<void> addMediaToAlbum(String id, sql.Album newValue) async {
+    return client!.addMediaToAlbum(AddMediaAlbumRequest(newValue.id, ["\"" + id + "\","] ));
   }
 }

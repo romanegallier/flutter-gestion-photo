@@ -1,9 +1,13 @@
+import 'package:sharing_codelab/photos_library_api/album.dart' as albumApi;
+import 'package:sharing_codelab/photos_library_api/media_item.dart' as mediaItemApi;
+
+
 class Album {
   String id;
   String title;
   String productUrl;
   int isWriteable;
-  String mediaItemsCount;
+  int mediaItemsCount;
   String coverPhotoBaseUrl;
   String coverPhotoMediaItemId;
 
@@ -21,6 +25,17 @@ class Album {
      'coverPhotoMediaItemId': coverPhotoMediaItemId ,
     };
   }
+
+  Album.fromDto(albumApi.Album dto): this(
+      id: dto.id!,
+      title: dto.title!,
+      productUrl: dto.productUrl!,
+      isWriteable: dto.isWriteable!=null? 1:0,
+      mediaItemsCount: dto.mediaItemsCount!=null ? int.parse(dto.mediaItemsCount!):0,
+      coverPhotoBaseUrl: dto.coverPhotoBaseUrl!=null ? dto.coverPhotoBaseUrl!: "",
+      coverPhotoMediaItemId: dto.coverPhotoMediaItemId!=null ? dto.coverPhotoMediaItemId!: ""
+  );
+
 
 
   @override

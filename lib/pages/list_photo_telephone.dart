@@ -2,6 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get_it/get_it.dart';
+import 'package:photo_gallery/photo_gallery.dart' as tel;
+import 'package:photo_gallery/photo_gallery.dart';
 import 'package:scoped_model/scoped_model.dart';
 import 'package:sharing_codelab/components/media_item_display.dart';
 import 'package:sharing_codelab/components/media_item_display2.dart';
@@ -16,27 +18,22 @@ import 'package:sharing_codelab/sqlModel/sql_service.dart';
 
 
 
-class ListPhotoNotInAlbumPage extends StatefulWidget {
-  const ListPhotoNotInAlbumPage({Key? key}) : super(key: key);
+class ListPhotoTelephonePage extends StatefulWidget {
+  const ListPhotoTelephonePage({Key? key}) : super(key: key);
 
-  //TODO paginer
-  //TODO ecriture de media item creation de transaction
-  //TODO problemme ... on peut seulement ajouter des photo creer par l'application dans des albums creer par l'application ...
 
   @override
-  State<ListPhotoNotInAlbumPage> createState() =>
+  State<ListPhotoTelephonePage> createState() =>
       _ListPhotoNotInAlbumPageState();
 }
 
-class _ListPhotoNotInAlbumPageState extends State<ListPhotoNotInAlbumPage> {
+class _ListPhotoNotInAlbumPageState extends State<ListPhotoTelephonePage> {
   late PhotosLibraryApiModel model;
 
-  late final Future<List<sql.MediaItem>> _listPhoto;
-  late final Future<List<sql.Album>> _listAlbum;
+  late final Future<List<tel.Album>> _listAlbum;
   var _sqlService = GetIt.I<SqlService>();
 
-  late int nbPhoto;
-  late int nbPhotoNotInAlbum;
+
 
 
   @override
@@ -50,8 +47,9 @@ class _ListPhotoNotInAlbumPageState extends State<ListPhotoNotInAlbumPage> {
 
   @override
   void initState() {
-    _listPhoto = listPhotoNotInAlbum();
-    _listAlbum = _sqlService.albums(); //TODO pagination
+    _listAlbum = PhotoGallery.listAlbums(
+      mediumType: mediumType.image,
+    );
 
   }
 
@@ -187,5 +185,175 @@ class _ListPhotoNotInAlbumPageState extends State<ListPhotoNotInAlbumPage> {
     } else {
       return Container();
     }
+  }
+}
+
+
+
+
+
+
+
+class AlbumPage extends StatefulWidget {
+  final Album album;
+
+  AlbumPage(Album album) : album = album;
+
+  @override
+  State<StatefulWidget> createState() => AlbumPageState();
+}
+
+class AlbumPageState extends State<AlbumPage> {
+  List<Medium>? _media;
+
+  @override
+  void initState() {
+    super.initState();
+    initAsync();
+  }
+
+  void initAsync() async {
+    MediaPage mediaPage = await widget.album.listMedia();
+    setState(() {
+      _media = mediaPage.items;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Text(widget.album.name ?? "Unnamed Album"),
+        ),
+        body: GridView.count(
+          crossAxisCount: 3,
+          mainAxisSpacing: 1.0,
+          crossAxisSpacing: 1.0,
+          children: <Widget>[
+            ...?_media?.map(
+                  (medium) => GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => ViewerPage(medium))),
+                child: Container(
+                  color: Colors.grey[300],
+                  child: FadeInImage(
+                    fit: BoxFit.cover,
+                    placeholder: MemoryImage(kTransparentImage),
+                    image: ThumbnailProvider(
+                      mediumId: medium.id,
+                      mediumType: medium.mediumType,
+                      highQuality: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ViewerPage extends StatelessWidget {
+  final Medium medium;
+
+  ViewerPage(Medium medium) : medium = medium;
+
+  @override
+  Widget build(BuildContext context) {
+    DateTime? date = medium.creationDate ?? medium.modifiedDate;
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(Icons.arrow_back_ios),
+          ),
+          title: date != null ? Text(date.toLocal().toString()) : null,
+        ),
+        body: Container(
+          alignment: Alignment.center,
+          child: medium.mediumType == MediumType.image
+              ? FadeInImage(
+            fit: BoxFit.cover,
+            placeholder: MemoryImage(kTransparentImage),
+            image: PhotoProvider(mediumId: medium.id),
+          )
+              : VideoProvider(
+            mediumId: medium.id,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class VideoProvider extends StatefulWidget {
+  final String mediumId;
+
+  const VideoProvider({
+    required this.mediumId,
+  });
+
+  @override
+  _VideoProviderState createState() => _VideoProviderState();
+}
+
+class _VideoProviderState extends State<VideoProvider> {
+  VideoPlayerController? _controller;
+  File? _file;
+
+  @override
+  void initState() {
+    WidgetsBinding.instance?.addPostFrameCallback((_) {
+      initAsync();
+    });
+    super.initState();
+  }
+
+  Future<void> initAsync() async {
+    try {
+      _file = await PhotoGallery.getFile(mediumId: widget.mediumId);
+      _controller = VideoPlayerController.file(_file!);
+      _controller?.initialize().then((_) {
+        // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
+        setState(() {});
+      });
+    } catch (e) {
+      print("Failed : $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _controller == null || !_controller!.value.isInitialized
+        ? Container()
+        : Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        AspectRatio(
+          aspectRatio: _controller!.value.aspectRatio,
+          child: VideoPlayer(_controller!),
+        ),
+        FlatButton(
+          onPressed: () {
+            setState(() {
+              _controller!.value.isPlaying
+                  ? _controller!.pause()
+                  : _controller!.play();
+            });
+          },
+          child: Icon(
+            _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+          ),
+        ),
+      ],
+    );
   }
 }

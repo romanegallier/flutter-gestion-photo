@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:path/path.dart';
 import 'package:sharing_codelab/photos_library_api/album.dart' as albumApi;
+import 'package:sharing_codelab/photos_library_api/media_item.dart' as mediaItemApi;
+import 'package:sharing_codelab/sqlModel/media_item.dart';
 import 'package:sharing_codelab/sqlModel/sql_service.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -11,6 +13,7 @@ class SqlServiceImpl extends SqlService {
   String dataBaseName = 'gestion_photo.db';
   String dogsTable = 'dogs';
   String albumTable = 'albums';
+  String mediaItemTable = 'mediaItems';
   late Future<Database> database;
 
   Future<void> createDogTable() async{
@@ -33,7 +36,11 @@ class SqlServiceImpl extends SqlService {
     await db.execute(
       'CREATE TABLE albums( id TEXT PRIMARY KEY, title TEXT, productUrl TEXT, isWriteable INTEGER, mediaItemsCount INTEGER, coverPhotoBaseUrl TEXT,coverPhotoMediaItemId TEXT)',
     );
-    return;
+    await db.execute(
+      'CREATE TABLE mediaItems( id TEXT PRIMARY KEY, description TEXT, productUrl TEXT, baseUrl TEXT, fileName STRING, isInAlbum INTEGER)',
+    );
+
+
   }
 
   // void _createDb(Database db, int newVersion) async {
@@ -71,6 +78,17 @@ class SqlServiceImpl extends SqlService {
     );
   }
 
+  // Define a function that inserts an media item into the database
+  @override
+  Future<void> insertMediaItem(MediaItem mediaItem) async {
+    final db = await database;
+    await db.insert(
+      mediaItemTable,
+      mediaItem.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   void test() async{
     // Create a Dog and add it to the dogs table
     var fido = Dog(
@@ -88,12 +106,23 @@ class SqlServiceImpl extends SqlService {
       coverPhotoBaseUrl: '',
       coverPhotoMediaItemId: '',
       isWriteable: 0,
-      mediaItemsCount: "0",
+      mediaItemsCount: 0,
       productUrl: '',
       title: '',
     );
     await insertAlbum(album);
-    //print(await albums()); //TODO remetre
+    print(await albums());
+
+    var mediaItem = MediaItem (
+      id: '0',
+      description: 'description',
+      productUrl: 'productUrl',
+      baseUrl: 'baseUrl',
+      fileName: 'fileName',
+      isInAlbum: false,
+    );
+    await insertMediaItem(mediaItem);
+    print(await mediaItems());
 
     // Update Fido's age and save it to the database.
     fido = Dog(
@@ -139,6 +168,23 @@ class SqlServiceImpl extends SqlService {
     });
   }
 
+  // A method that retrieves all the mediaitems from the albums table.
+  Future<List<MediaItem>> mediaItems() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(mediaItemTable);
+    // Convert the List<Map<String, dynamic> into a List<Dog>.
+    return List.generate(maps.length, (i) {
+      return MediaItem(
+        id: maps[i]['id'],
+        description: maps[i]['description'],
+        productUrl: maps[i]['productUrl'],
+        fileName: maps[i]['fileName'],
+        baseUrl: maps[i]['baseUrl'],
+        isInAlbum: maps[i]['isInAlbum']==1
+      );
+    });
+  }
+
   Future<void> updateDog(Dog dog) async {
     final db = await database;
     await db.update(
@@ -163,13 +209,31 @@ class SqlServiceImpl extends SqlService {
   }
 
   @override
-  void insertListAlbum(List<albumApi.Album> albumList) {
-
+  void insertListAlbum(List<albumApi.Album> albumList) async{
+      print("nbAlbum a inserer" + albumList.length.toString());
+      //removeAlbum();
+      for (albumApi.Album dto in albumList){
+        insertAlbum(Album.fromDto(dto));
+      }
+      List<Album> l = await albums();
+      print(l.length );
   }
 
-  Album dtoToBean(albumApi.Album dto){
-    return  Album(id: dto.id!, title: dto.title!, productUrl: dto.productUrl!, isWriteable: dto.isWriteable!? 1:0, mediaItemsCount: dto.mediaItemsCount!, coverPhotoBaseUrl: dto.coverPhotoBaseUrl!, coverPhotoMediaItemId: dto.coverPhotoMediaItemId!,);
+  @override
+  void insertListMedia(List<MediaItem> mediaList) async{
+    print("nbMedia a inserer" + mediaList.length.toString());
+    //removeAlbum();
+    for (MediaItem dto in mediaList){
+      insertMediaItem(dto);
+    }
+    List<MediaItem> l = await mediaItems();
+    print(l.length );
   }
+
+
+
+
+
 
   @override
   void removeAlbum() async{
@@ -178,5 +242,15 @@ class SqlServiceImpl extends SqlService {
       albumTable,
     );
   }
+
+  @override
+  void removeMedia() async{
+    final db = await database;
+    await db.delete(
+      mediaItemTable,
+    );
+  }
+
+
 
 }

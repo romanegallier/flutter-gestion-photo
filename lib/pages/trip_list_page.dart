@@ -8,7 +8,6 @@ import 'package:sharing_codelab/components/trip_app_bar.dart';
 import 'package:sharing_codelab/pages/list_photo_not_in_album.dart';
 import 'package:sharing_codelab/pages/trip_page.dart';
 import 'package:sharing_codelab/photos_library_api/album.dart';
-import 'package:sharing_codelab/photos_library_api/rename_album_request.dart';
 
 import 'create_trip_page.dart';
 import 'join_trip_page.dart';
@@ -209,6 +208,13 @@ Widget _buildButtons(BuildContext context, PhotosLibraryApiModel model) {
             model.reloadAlbum();
           },
           label: const Text('RELOAD ALBUM'),
+        ),
+        PrimaryRaisedButton(
+
+          onPressed: () {
+            model.reloadMedia();
+          },
+          label: const Text('RELOAD MEDIA'),
         ),
         Container(
           padding: const EdgeInsets.only(top: 10),

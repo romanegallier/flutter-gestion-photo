@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:scoped_model/scoped_model.dart';
 import 'package:sharing_codelab/components/contribute_photo_dialog.dart';
+import 'package:sharing_codelab/components/media_item_display.dart';
 
 import 'package:sharing_codelab/components/primary_raised_button.dart';
 import 'package:sharing_codelab/model/photos_library_api_model.dart';
@@ -261,29 +262,7 @@ class _TripPageState extends State<TripPage> {
   }
 
   Widget _buildMediaItem(MediaItem mediaItem) {
-    return Column(
-      children: <Widget>[
-        Center(
-          child: CachedNetworkImage(
-            imageUrl: '${mediaItem.baseUrl}=w364',
-            progressIndicatorBuilder: (context, url, downloadProgress) =>
-                CircularProgressIndicator(value: downloadProgress.progress),
-            errorWidget: (BuildContext context, String url, Object? error) {
-              print(error);
-              return const Icon(Icons.error);
-            },
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 2),
-          width: 364,
-          child: Text(
-            mediaItem.description ?? '',
-            textAlign: TextAlign.left,
-          ),
-        ),
-      ],
-    );
+    return MediaItemDisplay(mediaItem: mediaItem);
   }
 }
 
